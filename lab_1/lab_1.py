@@ -1,3 +1,7 @@
+import base64
+import struct
+
+
 def encrypt_text(text: bytes, key: bytes) -> bytes:
     """
 
@@ -6,14 +10,16 @@ def encrypt_text(text: bytes, key: bytes) -> bytes:
     :return:
     """
     encrypted_text: bytes = b''
-    blocks: list[bytes] = split_text_into_blocks(text)
-    gamma_keys: list[bytes] = generate_gamma_keys(key)
-    for block, key in zip(blocks, gamma_keys):
-        encrypted_text += block ^ key
+    gamma_keys = generate_gamma_keys(key)
+    text = base64.b64encode(text)
+    for i in range(0, len(text), 8):
+        block = text[i:i + 8]
+        encrypted_text += bytes(x ^ int.from_bytes(y, byteorder='little') for x, y in zip(block, gamma_keys))
+
     return encrypted_text
 
 
-def decrypt_text(encrypted_text: bytes, key: bytes) -> bytes:
+def decrypt_text(encrypted_text: bytes, key: bytes) -> str:
     """
 
     :param encrypted_text:
@@ -21,11 +27,13 @@ def decrypt_text(encrypted_text: bytes, key: bytes) -> bytes:
     :return:
     """
     decrypted_text: bytes = b''
-    blocks: list[bytes] = split_text_into_blocks(encrypted_text)
-    gamma_keys: list[bytes] = generate_gamma_keys(key)
-    for block, key in zip(blocks, gamma_keys):
-        decrypted_text += block ^ key
-    return decrypted_text
+    gamma_keys = generate_gamma_keys(key)
+
+    for i in range(0, len(encrypted_text), 8):
+        block = encrypted_text[i:i + 8]
+        decrypted_text += bytes(x ^ int.from_bytes(y, byteorder='little') for x, y in zip(block, gamma_keys))
+    decrypted_text = base64.b64decode (decrypted_text)
+    return decrypted_text.decode("utf-8")
 
 
 def split_text_into_blocks(text: bytes) -> list[bytes]:
